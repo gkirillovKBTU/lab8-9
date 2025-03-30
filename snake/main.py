@@ -37,27 +37,6 @@ snakeHeadImage = pygame.image.load("snakeout.png")
 fruitImage = pygame.image.load("appleout.png")
 
 
-class SnakeBody(pygame.sprite.Sprite):
-    def __init__(self, x, y, state, radius=10):
-        super().__init__()
-        self.radius = radius
-        d = radius * 2
-        self.image = pygame.Surface((d, d), pygame.SRCALPHA)
-        pygame.draw.circle(self.image, 'green', (radius, radius), radius)
-        # self.rect = self.image.get_rect(center=(x, y)
-        self.rect = pygame.Surface((radius, radius),).get_rect(center=(x, y))
-        self.current_state = state
-
-    def change_direction(self, point):
-        self.current_state = point.change_state
-
-    def move(self):
-
-        self.rect.move_ip(get_movement(self.current_state))
-        self.rect.x = max(0, min(self.rect.x, SCREEN_WIDTH - self.rect.width))
-        self.rect.y = max(0, min(self.rect.y, SCREEN_HEIGHT - self.rect.height))
-
-
 # Try to use State pattern
 class SnakeHead(pygame.sprite.Sprite):
 
@@ -115,18 +94,27 @@ class SnakeHead(pygame.sprite.Sprite):
 
 
 class Fruit(pygame.sprite.Sprite):
-    def __init__(self):
+    def __init__(self, lifetime=5, weight=1):
         super().__init__() 
         self.image = fruitImage
         self.rect = self.image.get_rect()
         self.rect.center = (random.randint(40,SCREEN_WIDTH-40),random.randint(40, SCREEN_HEIGHT-40))
 
+        self.appear_time = pygame.time.get_ticks()
+        self.lifetime = lifetime # lifetime in ms
+
+        self.weight = weight
+
+    def update(self):
+        if pygame.time.get_ticks() - self.appear_time > self.lifetime:
+            self.kill()
+
 
 class CollisionPoint(pygame.sprite.Sprite):
     def __init__(self, x, y, state):
         super().__init__()
-        self.image = pygame.Surface((3, 3), )  # Small point
-        self.image.fill(GREEN)
+        self.image = pygame.Surface((5, 5), pygame.SRCALPHA)  # Small point
+        self.image.fill((0, 255, 0, 255))
         self.change_state = state
         self.rect = self.image.get_rect(center=(x, y))
 
@@ -155,8 +143,6 @@ def get_movement(state):
         case 'LEFT':
             return (-appState.get('speed'), 0)
 
-
-defaultBody = partial(SnakeBody, 25, *DISPLAYSURF.get_rect().center)
 game_over = font.render("Game Over", True, 'white')
 
 S1 = SnakeHead(*DISPLAYSURF.get_rect().center)
@@ -180,7 +166,9 @@ while appState['RUN']:
             pygame.quit()
             sys.exit()
         if event.type == CREATE_FRUIT and len(fruits) < 5:
-            fruit = Fruit()
+            lifetime = random.randint(3000, 5000)
+            weight = random.randint(1, 5)
+            fruit = Fruit(lifetime, weight)
             fruits.add(fruit)
     DISPLAYSURF.fill('black')
 
@@ -196,29 +184,8 @@ while appState['RUN']:
     collision_points.draw(DISPLAYSURF)
 
     if pygame.sprite.spritecollideany(S1, fruits):
-        SCORE += 1
-        # snakeBodiesNeeded = SCORE // 3 + 1
+        # SCORE += random.randint(1, 3)
         appState['window_size'] = SCORE*5 + SNAKE_INITIAL_LENGTH
-        # if len(Sbodies) < snakeBodiesNeeded:
-        #     last_node = S1.tail
-        #     last_coords = last_node.rect.center
-        #     movement = get_movement(last_node.current_state)
-        #     new_coords = (last_coords[0] - (get_sign(movement[0]) * last_node.rect.width),
-        #                   last_coords[1] - (get_sign(movement[1]) * last_node.rect.height))
-        #     sbody = SnakeBody(*new_coords, last_node.current_state)
-        #     Sbodies.add(sbody)
-        #     S1.tail = sbody
-
-    # for i, body in enumerate(Sbodies):
-    #     collided_point = pygame.sprite.spritecollideany(body, collision_points)
-    #     if collided_point and body.rect.collidepoint(collided_point.rect.center):
-    #         body.change_direction(collided_point)
-    #         # if S1.tail == body or S1.tail == S1: collided_point.kill()
-    #     DISPLAYSURF.blit(body.image, body.rect)
-    #     body.move()
-
-    # last_node_checked = pygame.sprite.spritecollideany(S1.tail, collision_points)
-    # if last_node_checked: last_node_checked.kill()
 
     for point in collision_points:
         if point not in bodyWindow:
@@ -232,7 +199,9 @@ while appState['RUN']:
 
     for fruit in fruits:
         if pygame.sprite.collide_rect(fruit, S1):
+            SCORE += fruit.weight
             fruit.kill()
+        fruit.update()
         DISPLAYSURF.blit(fruit.image, fruit.rect)
 
     # if pygame.sprite.spritecollideany(S1, Sbodies): game_over_handler()

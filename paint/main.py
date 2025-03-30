@@ -4,7 +4,8 @@ def main():
     pygame.init()
     screen = pygame.display.set_mode((640, 480))
     clock = pygame.time.Clock()
-    
+
+    # defining constants
     radius = 15
     x = 0
     y = 0
@@ -67,9 +68,11 @@ def main():
                 position = event.pos
                 points = points + [(position, mode)]
                 # points = points[-256:] # takes only the last -256
-                
+
         screen.fill((0, 0, 0))
-        
+
+        mouse_x, mouse_y = pygame.mouse.get_pos()
+
         # draw all points
         i = 0
         while i < len(points) - 1:
@@ -79,7 +82,14 @@ def main():
         for geometry in geometricals:
             match geometry[0]:
                 case 'rect':
-                    pygame.draw.rect(screen, geometry[2], geometry[1], 0, 10)
+                    color = geometry[2]
+                    form = geometry[1]
+                    rect_setup = pygame.Rect(*form)
+                    pygame.draw.rect(screen, color, rect_setup)
+                    if lmouse_held and rect_setup.collidepoint(mouse_x, mouse_y):
+                        erase_rect = pygame.Rect(mouse_x - radius // 2, mouse_y - radius // 2, radius, radius)
+                        pygame.draw.rect(screen, 'black', erase_rect)
+
                 case 'circ':
                     pygame.draw.circle(screen, geometry[3], geometry[1], geometry[2])
             # geometry.draw(screen)
@@ -93,7 +103,7 @@ def drawLineBetween(screen, index, start, end, width, color_mode):
     # print(start, end, color_mode)
     c1 = max(0, min(255, 2 * index - 256)) # the gradient effects
     c2 = max(0, min(255, 2 * index))
-    
+
     if color_mode == 'blue':
         color = (c1, c1, c2)
     elif color_mode == 'red':

@@ -1,5 +1,6 @@
 import pygame
 
+
 def main():
     pygame.init()
     screen = pygame.display.set_mode((640, 480))
@@ -12,7 +13,8 @@ def main():
     mode = 'blue'
     points = []
     geometricals = []
-    
+    erase_buffer = []
+
     while True:
         
         pressed = pygame.key.get_pressed()
@@ -40,11 +42,41 @@ def main():
                         mode = 'red'
                     else:
                         position = pygame.mouse.get_pos()
-                        geometricals.append(('rect', (*position, 50, 50), mode))
+                        geometricals.append(('rect', (*position, radius*4, radius*2), mode))
                 elif event.key == pygame.K_c:
                     position = pygame.mouse.get_pos()
-                    geometricals.append(('circ', position, 25, mode))
-
+                    geometricals.append(('circ', position, radius, mode))
+                elif event.key == pygame.K_s:
+                    position = pygame.mouse.get_pos()
+                    geometricals.append(('rect', (*position, radius*2, radius*2), mode))
+                elif event.key == pygame.K_i:
+                    position = pygame.mouse.get_pos()
+                    triangle_points = [
+                        (position[0] - radius*4, position[1] - radius*4),
+                        (position[0] - radius*4, position[1] + radius*4),
+                        (position[0], position[1] + radius*4)
+                    ]
+                    geometricals.append(('triangle', triangle_points, mode))
+                elif event.key == pygame.K_h:  # rhombus
+                    position = pygame.mouse.get_pos()
+                    rhombus_points = [
+                        (position[0], position[1] - radius*4),  # top
+                        (position[0] + radius*4, position[1]),  # right
+                        (position[0], position[1] + radius*4),  # bottom
+                        (position[0] - radius*4, position[1])   # left
+                    ]
+                    geometricals.append(('rhombus', rhombus_points, mode))
+                elif event.key == pygame.K_t:  # equilateral triangle
+                    position = pygame.mouse.get_pos()
+                    size = radius * 4
+                    # Calculate points for equilateral triangle
+                    height = size * (3 ** 0.5) / 2
+                    triangle_points = [
+                        (position[0], position[1] - height),  # top
+                        (position[0] - size/2, position[1] + height/2),  # bottom left
+                        (position[0] + size/2, position[1] + height/2)   # bottom right
+                    ]
+                    geometricals.append(('triangle', triangle_points, mode))
                 elif event.key == pygame.K_g:
                     mode = 'green'
                 elif event.key == pygame.K_b:
@@ -81,37 +113,51 @@ def main():
 
         for geometry in geometricals:
             match geometry[0]:
-                case 'rect':
+                case 'circ':
+                    pygame.draw.circle(screen, geometry[3], geometry[1], geometry[2])
+
+                case "rect":
                     color = geometry[2]
                     form = geometry[1]
                     rect_setup = pygame.Rect(*form)
                     pygame.draw.rect(screen, color, rect_setup)
+    
                     if lmouse_held and rect_setup.collidepoint(mouse_x, mouse_y):
                         erase_rect = pygame.Rect(mouse_x - radius // 2, mouse_y - radius // 2, radius, radius)
-                        pygame.draw.rect(screen, 'black', erase_rect)
+                        erase_buffer.append((erase_rect, mode))
 
-                case 'circ':
-                    pygame.draw.circle(screen, geometry[3], geometry[1], geometry[2])
+                case "triangle":
+                    color = geometry[2]
+                    pygame.draw.polygon(screen, color, geometry[1])
+                case "rhombus":
+                    color = geometry[2]
+                    pygame.draw.polygon(screen, color, geometry[1])
             # geometry.draw(screen)
+
+        for rect, color in erase_buffer:
+            pygame.draw.rect(screen, color, rect)
 
         pygame.display.flip()
 
         clock.tick(60)
 
 # break down the logic 
-def drawLineBetween(screen, index, start, end, width, color_mode):
+def drawLineBetween(screen, index, start, end, width, color_mode, gradient=False):
     # print(start, end, color_mode)
-    c1 = max(0, min(255, 2 * index - 256)) # the gradient effects
-    c2 = max(0, min(255, 2 * index))
+    if gradient:
+        c1 = max(0, min(255, 2 * index - 256)) # the gradient effects
+        c2 = max(0, min(255, 2 * index))
 
-    if color_mode == 'blue':
-        color = (c1, c1, c2)
-    elif color_mode == 'red':
-        color = (c2, c1, c1)
-    elif color_mode == 'green':
-        color = (c1, c2, c1)
-    elif color_mode == 'black':
-        color = (0, 0, 0)
+        if color_mode == 'blue':
+            color = (c1, c1, c2)
+        elif color_mode == 'red':
+            color = (c2, c1, c1)
+        elif color_mode == 'green':
+            color = (c1, c2, c1)
+        elif color_mode == 'black':
+            color = (0, 0, 0)
+    else:
+        color = color_mode
 
     # takes the difference in coordinates between two adjacent indices
     dx = start[0] - end[0] 
